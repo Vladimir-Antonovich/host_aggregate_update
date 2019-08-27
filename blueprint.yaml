@@ -1,0 +1,96 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/4.5/types.yaml
+  - plugin:cloudify-openstack-plugin?version=3.2.3
+  - plugin:cloudify-utilities-plugin
+
+inputs:
+
+  archive:
+    type: string
+    description: URL to the archive "host_aggregate_resource.zip"
+    default: "https://drive.google.com/a/cloudify.co/uc?authuser=0&id=11wbTpG_dpDnz2JcQtVZjSAWfcRDIeTZH&export=download"
+
+  blueprint_name:
+    type: string
+    default: get_host_aggregate
+
+  deployment_name:
+    type: string
+    default: get_host_aggregate
+
+dsl_definitions:
+
+  client_config: &client_config
+    auth_url: { get_secret: openstack_auth_url }
+    username: { get_secret: openstack_username }
+    password: { get_secret: openstack_password }
+    project_name: { get_secret: openstack_tenant_name }
+    tenant_name: { get_secret: openstack_tenant_name }
+    region_name: { get_secret: openstack_region }
+    user_domain_name: 'default'
+    project_domain_name: 'default'
+
+node_templates:
+
+  project:
+    type: cloudify.nodes.openstack.Project
+    properties:
+      client_config: *client_config
+      use_external_resource: true
+      resource_config:
+        name: 'test_project1'
+
+  host_aggregate:
+    type: cloudify.nodes.DeploymentProxy
+    properties:
+      resource_config:
+        blueprint:
+          id: { get_input: blueprint_name }
+          blueprint_archive: { get_input: archive }
+          main_file_name: blueprint.yaml
+        deployment:
+          id: { get_input: deployment_name }
+          outputs:
+            filter_tenant_id: filter_tenant_id
+
+
+  update_filter_tenant_id:
+    type: cloudify.nodes.DeploymentProxy
+    properties:
+      resource_config:
+        executions_start_args:
+          parameters:
+            allow_kwargs_override: true
+            operation_kwargs:
+              args:
+                metadata:
+                  filter_tenant_id:
+                    concat:
+                      - { get_attribute: [project, id] }
+                      - ','
+                      - { get_attribute: [host_aggregate, deployment, outputs, filter_tenant_id] }
+            operation: cloudify.interfaces.operations.update
+            node_ids:
+              - host_aggregate
+        blueprint:
+          external_resource: true
+          id: { get_input: blueprint_name }
+        deployment:
+          external_resource: true
+          id: { get_input: deployment_name }
+          outputs:
+            filter_tenant_id: filter_tenant_id
+        reexecute: true
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          inputs:
+            workflow_id: execute_operation
+
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: host_aggregate
+      - type: cloudify.relationships.depends_on
+        target: project
