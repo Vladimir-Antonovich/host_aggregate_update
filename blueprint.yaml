@@ -9,7 +9,6 @@ inputs:
 
   archive:
     type: string
-    description: URL to the archive "host_aggregate_resource.zip"
     default: "https://github.com/Vladimir-Antonovich/host_aggregate_update/archive/master.zip"
 
   blueprint_name:
