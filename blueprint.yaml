@@ -140,3 +140,5 @@ node_templates:
         target: host_aggregate
       - type: cloudify.relationships.depends_on
         target: project2
+      - type: cloudify.relationships.depends_on
+        target: update_filter_tenant_id1
