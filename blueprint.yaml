@@ -117,7 +117,7 @@ node_templates:
                     concat:
                       - { get_attribute: [project2, id] }
                       - ','
-                      - { get_attribute: [host_aggregate, deployment, outputs, filter_tenant_id] }
+                      - { get_attribute: [update_filter_tenant_id1, deployment, outputs, filter_tenant_id] }
             operation: cloudify.interfaces.operations.update
             node_ids:
               - host_aggregate
